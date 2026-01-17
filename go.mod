@@ -1,3 +1,3 @@
-module wishlist-checker
+module cardboard-hunter
 
 go 1.21

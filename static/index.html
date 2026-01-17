@@ -416,52 +416,78 @@
 
     <script>
         // State
-        let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        let wishlist = [];
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadWishlist();
             renderWishlist();
         });
 
         // Wishlist management
-        function addGame() {
+        async function addGame() {
             const input = document.getElementById('gameInput');
             const name = input.value.trim();
-            
+
             if (!name) return;
-            
+
             if (wishlist.some(g => g.name.toLowerCase() === name.toLowerCase())) {
                 alert('Game already in wishlist');
                 return;
             }
 
             wishlist.push({ name, priority: wishlist.length + 1 });
-            saveWishlist();
+            await saveWishlist();
             renderWishlist();
             input.value = '';
             input.focus();
         }
 
-        function removeGame(index) {
+        async function removeGame(index) {
             wishlist.splice(index, 1);
             // Reorder priorities
             wishlist.forEach((g, i) => g.priority = i + 1);
-            saveWishlist();
+            await saveWishlist();
             renderWishlist();
         }
 
-        function moveGame(index, direction) {
+        async function moveGame(index, direction) {
             const newIndex = index + direction;
             if (newIndex < 0 || newIndex >= wishlist.length) return;
-            
+
             [wishlist[index], wishlist[newIndex]] = [wishlist[newIndex], wishlist[index]];
             wishlist.forEach((g, i) => g.priority = i + 1);
-            saveWishlist();
+            await saveWishlist();
             renderWishlist();
         }
 
-        function saveWishlist() {
-            localStorage.setItem('wishlist', JSON.stringify(wishlist));
+        // Load wishlist from server
+        async function loadWishlist() {
+            try {
+                const response = await fetch('/api/games');
+                if (response.ok) {
+                    wishlist = await response.json();
+                }
+            } catch (err) {
+                console.error('Failed to load wishlist:', err);
+            }
+        }
+
+        // Save wishlist to server
+        async function saveWishlist() {
+            try {
+                const response = await fetch('/api/games', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(wishlist)
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to save');
+                }
+            } catch (err) {
+                console.error('Failed to save wishlist:', err);
+                alert('Failed to save wishlist. Please try again.');
+            }
         }
 
         function renderWishlist() {
@@ -497,33 +523,33 @@
             URL.revokeObjectURL(url);
         }
 
-        function importList() {
+        async function importList() {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.txt,.csv';
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 const text = await file.text();
                 const lines = text.split(/[\n,]/).map(l => l.trim()).filter(l => l);
-                
+
                 lines.forEach(name => {
                     if (!wishlist.some(g => g.name.toLowerCase() === name.toLowerCase())) {
                         wishlist.push({ name, priority: wishlist.length + 1 });
                     }
                 });
-                
-                saveWishlist();
+
+                await saveWishlist();
                 renderWishlist();
             };
             input.click();
         }
 
-        function clearList() {
+        async function clearList() {
             if (!confirm('Clear entire wishlist?')) return;
             wishlist = [];
-            saveWishlist();
+            await saveWishlist();
             renderWishlist();
             document.getElementById('resultsPanel').style.display = 'none';
         }
