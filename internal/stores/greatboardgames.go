@@ -12,13 +12,11 @@ import (
 	"cardboard-hunter/internal/utils"
 )
 
-// GreatBoardGames represents the Great Board Games store
 type GreatBoardGames struct {
 	name    string
 	baseURL string
 }
 
-// NewGreatBoardGames creates a new Great Board Games store checker
 func NewGreatBoardGames() *GreatBoardGames {
 	return &GreatBoardGames{
 		name:    "Great Board Games",
@@ -26,29 +24,21 @@ func NewGreatBoardGames() *GreatBoardGames {
 	}
 }
 
-// Name returns the store name
 func (s *GreatBoardGames) Name() string {
 	return s.name
 }
 
-// Check searches for a game at Great Board Games
 func (s *GreatBoardGames) Check(gameName string) models.StoreResult {
-	result := models.StoreResult{
-		Store: s.name,
-	}
+	result := models.StoreResult{Store: s.name}
 
-	searchURL := fmt.Sprintf(
-		"%s/search?q=%s",
-		s.baseURL,
-		url.QueryEscape(gameName),
-	)
+	searchURL := fmt.Sprintf("%s/search?q=%s", s.baseURL, url.QueryEscape(gameName))
 
 	req, err := http.NewRequest("GET", searchURL, nil)
 	if err != nil {
 		result.Error = err.Error()
 		return result
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; WishlistChecker/1.0)")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
@@ -65,57 +55,34 @@ func (s *GreatBoardGames) Check(gameName string) models.StoreResult {
 
 	html := string(body)
 
-	// Parse search results using regex
-	// Looking for product cards with title, price, and URL
-	productPattern := regexp.MustCompile(`<a[^>]*href="(/games/[^"]+)"[^>]*>.*?<h3[^>]*>([^<]+)</h3>.*?\$([0-9.]+)`)
-	matches := productPattern.FindAllStringSubmatch(html, -1)
+	// Split HTML by product-card divs
+	cardSplitter := regexp.MustCompile(`<div class="product-card`)
+	titlePattern := regexp.MustCompile(`<a href="(https://www\.greatboardgames\.ca/games/[^"]+)"[^>]*class="text-dark"[^>]*>([^<]+)</a>`)
+	pricePattern := regexp.MustCompile(`<span[^>]*>\$([0-9]+\.[0-9]{2})</span>`)
 
-	if len(matches) == 0 {
-		// Try alternate pattern
-		s.parseAlternateFormat(html, gameName, &result)
-	} else {
-		s.parseStandardFormat(matches, gameName, &result)
+	parts := cardSplitter.Split(html, -1)
+	for _, cardHTML := range parts[1:] { // Skip first part (before any card)
+		titleMatch := titlePattern.FindStringSubmatch(cardHTML)
+		if titleMatch == nil {
+			continue
+		}
+
+		title := strings.TrimSpace(titleMatch[2])
+		if !utils.FuzzyMatch(gameName, title) {
+			continue
+		}
+
+		result.Found = true
+		result.Title = title
+		result.URL = titleMatch[1]
+		result.InStock = !strings.Contains(cardHTML, "Out of Stock")
+
+		if priceMatch := pricePattern.FindStringSubmatch(cardHTML); priceMatch != nil {
+			result.Price = "$" + priceMatch[1]
+			result.PriceNum = utils.ParsePrice(priceMatch[1])
+		}
+		return result
 	}
 
 	return result
-}
-
-// parseStandardFormat parses the standard product card format
-func (s *GreatBoardGames) parseStandardFormat(matches [][]string, gameName string, result *models.StoreResult) {
-	for _, match := range matches {
-		title := strings.TrimSpace(match[2])
-		if utils.FuzzyMatch(gameName, title) {
-			result.Found = true
-			result.Title = title
-			result.URL = s.baseURL + match[1]
-			result.Price = "$" + match[3]
-			result.PriceNum = utils.ParsePrice(match[3])
-			result.InStock = true // If it shows up in search, likely in stock
-			break
-		}
-	}
-}
-
-// parseAlternateFormat parses an alternate HTML format
-func (s *GreatBoardGames) parseAlternateFormat(html, gameName string, result *models.StoreResult) {
-	titlePattern := regexp.MustCompile(`href="(/games/[^"]+)"[^>]*>\s*<[^>]*>\s*([^<]+)`)
-	pricePattern := regexp.MustCompile(`\$([0-9]+\.[0-9]{2})`)
-
-	titleMatches := titlePattern.FindAllStringSubmatch(html, 10)
-	priceMatches := pricePattern.FindAllStringSubmatch(html, 10)
-
-	for i, tm := range titleMatches {
-		title := strings.TrimSpace(tm[2])
-		if utils.FuzzyMatch(gameName, title) {
-			result.Found = true
-			result.Title = title
-			result.URL = s.baseURL + tm[1]
-			result.InStock = !strings.Contains(html, "Out of Stock") && !strings.Contains(html, "Sold Out")
-			if i < len(priceMatches) {
-				result.Price = "$" + priceMatches[i][1]
-				result.PriceNum = utils.ParsePrice(priceMatches[i][1])
-			}
-			break
-		}
-	}
 }
