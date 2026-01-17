@@ -28,6 +28,9 @@ go.work.sum
 # env file
 .env
 
+# User data
+games.json
+
 # Editor/IDE
 # .idea/
 # .vscode/
