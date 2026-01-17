@@ -2,33 +2,65 @@ package utils
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
-// FuzzyMatch checks if a search term matches a title using fuzzy matching logic
+var wordSplitter = regexp.MustCompile(`[\s\-:,()\[\]]+`)
+
+func splitIntoWords(s string) []string {
+	parts := wordSplitter.Split(s, -1)
+	words := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p != "" {
+			words = append(words, p)
+		}
+	}
+	return words
+}
+
+// ExactTitleMatch checks if title matches search exactly (ignoring case)
+func ExactTitleMatch(search, title string) bool {
+	return strings.EqualFold(strings.TrimSpace(search), strings.TrimSpace(title))
+}
+
+// ShouldExclude checks if a product should be filtered out
+func ShouldExclude(title string) bool {
+	t := strings.ToLower(title)
+	return strings.Contains(t, "pre-order") || strings.Contains(t, "preorder")
+}
+
+// FuzzyMatch checks if search term matches title using word boundary matching
 func FuzzyMatch(search, title string) bool {
 	searchLower := strings.ToLower(search)
 	titleLower := strings.ToLower(title)
+	titleWords := splitIntoWords(titleLower)
 
-	// Exact substring match
-	if strings.Contains(titleLower, searchLower) {
-		return true
-	}
-
-	// Check if all words from search appear in title
 	searchWords := strings.Fields(searchLower)
-	allFound := true
-	for _, word := range searchWords {
-		if len(word) < 3 {
-			continue
+	if len(searchWords) == 1 {
+		// Single word: must match as complete word
+		for _, w := range titleWords {
+			if w == searchLower {
+				return true
+			}
 		}
-		if !strings.Contains(titleLower, word) {
-			allFound = false
-			break
-		}
+		return false
 	}
 
-	return allFound
+	// Multi-word: all search words must be present as complete words
+	for _, sw := range searchWords {
+		found := false
+		for _, tw := range titleWords {
+			if tw == sw {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 // ParsePrice extracts a numeric price from a price string

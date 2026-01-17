@@ -4,18 +4,29 @@ package models
 type Game struct {
 	Name     string `json:"name"`
 	Priority int    `json:"priority"`
+	Starred  bool   `json:"starred"`
+}
+
+// ProductMatch represents a single matching product from a store
+type ProductMatch struct {
+	Title    string  `json:"title"`
+	Price    string  `json:"price"`
+	PriceNum float64 `json:"priceNum"`
+	URL      string  `json:"url"`
+	InStock  bool    `json:"inStock"`
 }
 
 // StoreResult represents the availability result from a single store
 type StoreResult struct {
-	Store    string  `json:"store"`
-	Found    bool    `json:"found"`
-	InStock  bool    `json:"inStock"`
-	Price    string  `json:"price"`
-	PriceNum float64 `json:"priceNum"`
-	URL      string  `json:"url"`
-	Title    string  `json:"title"`
-	Error    string  `json:"error,omitempty"`
+	Store    string         `json:"store"`
+	Found    bool           `json:"found"`
+	InStock  bool           `json:"inStock"`
+	Price    string         `json:"price"`
+	PriceNum float64        `json:"priceNum"`
+	URL      string         `json:"url"`
+	Title    string         `json:"title"`
+	Error    string         `json:"error,omitempty"`
+	Matches  []ProductMatch `json:"matches,omitempty"`
 }
 
 // GameResult represents all store results for a single game

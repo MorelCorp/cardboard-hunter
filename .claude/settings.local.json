@@ -4,7 +4,9 @@
       "Bash(curl:*)",
       "Bash(go build:*)",
       "Bash(go test:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(timeout 3:*)",
+      "Bash(timeout:*)"
     ]
   }
 }

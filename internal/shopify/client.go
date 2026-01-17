@@ -60,38 +60,53 @@ func (c *Client) Search(baseURL, gameName string) ([]Product, error) {
 	return data.Resources.Results.Products, nil
 }
 
-// FindBestMatch finds the best matching product from search results
-func FindBestMatch(gameName string, products []Product, baseURL string) (models.StoreResult, bool) {
-	var result models.StoreResult
+// FindMatches finds all matching products from search results (up to limit)
+func FindMatches(gameName string, products []Product, baseURL string, limit int) []models.ProductMatch {
+	var matches []models.ProductMatch
+	for _, product := range products {
+		if utils.ShouldExclude(product.Title) {
+			continue
+		}
+		if utils.FuzzyMatch(gameName, product.Title) {
+			matches = append(matches, models.ProductMatch{
+				Title:    product.Title,
+				URL:      baseURL + product.URL,
+				Price:    product.Price,
+				PriceNum: utils.ParsePrice(product.Price),
+				InStock:  product.Available,
+			})
+			if len(matches) >= limit {
+				break
+			}
+		}
+	}
+	return matches
+}
 
-	if len(products) == 0 {
-		return result, false
+// BuildStoreResult creates a StoreResult from matches
+// If an exact title match exists, returns only that match
+func BuildStoreResult(storeName string, matches []models.ProductMatch, gameName string) models.StoreResult {
+	if len(matches) == 0 {
+		return models.StoreResult{Store: storeName}
 	}
 
-	// Find best match using fuzzy matching
-	for _, product := range products {
-		if utils.FuzzyMatch(gameName, product.Title) {
-			result.Found = true
-			result.Title = product.Title
-			result.URL = baseURL + product.URL
-			result.InStock = product.Available
-			result.Price = product.Price
-			result.PriceNum = utils.ParsePrice(product.Price)
-			return result, true
+	// Check for exact title match - if found, use only that
+	for _, m := range matches {
+		if utils.ExactTitleMatch(gameName, m.Title) {
+			matches = []models.ProductMatch{m}
+			break
 		}
 	}
 
-	// Fallback to first result if nothing matched but we have results
-	if len(products) > 0 {
-		product := products[0]
-		result.Found = true
-		result.Title = product.Title
-		result.URL = baseURL + product.URL
-		result.InStock = product.Available
-		result.Price = product.Price
-		result.PriceNum = utils.ParsePrice(product.Price)
-		return result, true
+	first := matches[0]
+	return models.StoreResult{
+		Store:    storeName,
+		Found:    true,
+		Title:    first.Title,
+		URL:      first.URL,
+		Price:    first.Price,
+		PriceNum: first.PriceNum,
+		InStock:  first.InStock,
+		Matches:  matches,
 	}
-
-	return result, false
 }

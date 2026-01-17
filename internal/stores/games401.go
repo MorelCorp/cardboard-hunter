@@ -28,52 +28,53 @@ func (s *Games401) Name() string {
 
 // Check searches for a game at 401 Games
 func (s *Games401) Check(gameName string) models.StoreResult {
-	result := models.StoreResult{
-		Store: s.name,
-	}
-
 	products, err := ShopifyClient.Search(s.baseURL, gameName)
 	if err != nil {
-		result.Error = err.Error()
-		return result
+		return models.StoreResult{Store: s.name, Error: err.Error()}
 	}
 
-	if len(products) == 0 {
-		return result
-	}
-
-	// Find best match (filtering out non-board-game products like TCG singles)
+	var matches []models.ProductMatch
 	for _, product := range products {
-		if isTCGProduct(product.Title) {
+		if isTCGProduct(product.Title) || utils.ShouldExclude(product.Title) {
 			continue
 		}
-
 		if utils.FuzzyMatch(gameName, product.Title) {
-			result.Found = true
-			result.Title = product.Title
-			result.URL = s.baseURL + product.URL
-			result.InStock = product.Available
-			result.Price = product.Price
-			result.PriceNum = utils.ParsePrice(product.Price)
-			return result
+			matches = append(matches, models.ProductMatch{
+				Title:    product.Title,
+				URL:      s.baseURL + product.URL,
+				Price:    product.Price,
+				PriceNum: utils.ParsePrice(product.Price),
+				InStock:  product.Available,
+			})
+			if len(matches) >= 5 {
+				break
+			}
 		}
 	}
 
-	// Fallback to first non-TCG result if nothing matched
-	for _, product := range products {
-		if isTCGProduct(product.Title) {
-			continue
-		}
-		result.Found = true
-		result.Title = product.Title
-		result.URL = s.baseURL + product.URL
-		result.InStock = product.Available
-		result.Price = product.Price
-		result.PriceNum = utils.ParsePrice(product.Price)
-		return result
+	if len(matches) == 0 {
+		return models.StoreResult{Store: s.name}
 	}
 
-	return result
+	// If exact title match exists, use only that
+	for _, m := range matches {
+		if utils.ExactTitleMatch(gameName, m.Title) {
+			matches = []models.ProductMatch{m}
+			break
+		}
+	}
+
+	first := matches[0]
+	return models.StoreResult{
+		Store:    s.name,
+		Found:    true,
+		Title:    first.Title,
+		URL:      first.URL,
+		Price:    first.Price,
+		PriceNum: first.PriceNum,
+		InStock:  first.InStock,
+		Matches:  matches,
+	}
 }
 
 // isTCGProduct checks if a product is a TCG single, sleeve, or booster

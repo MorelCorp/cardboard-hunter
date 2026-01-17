@@ -385,6 +385,196 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Star toggle */
+        .star-toggle {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.2s;
+            padding: 0 0.25rem;
+        }
+
+        .star-toggle:hover {
+            color: var(--warning);
+            transform: none;
+        }
+
+        .star-toggle.starred {
+            color: var(--warning);
+        }
+
+        /* View controls */
+        .view-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button.small.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .cart-limit-input {
+            width: 3.5rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            color: var(--text);
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .cart-limit-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-left: 0.75rem;
+        }
+
+        /* Cart view */
+        .cart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .cart-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .cart-card.has-starred {
+            border-color: var(--warning);
+            box-shadow: 0 0 15px rgba(255, 200, 87, 0.15);
+        }
+
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: var(--surface-hover);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cart-header .store-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .cart-header .score {
+            background: var(--accent);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .starred-badge {
+            color: var(--warning);
+            font-size: 0.85rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(255, 200, 87, 0.1);
+        }
+
+        .cart-items {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .cart-item {
+            display: grid;
+            grid-template-columns: 2rem 1.5rem 1fr auto auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item .item-priority {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .cart-item .item-star {
+            color: var(--warning);
+        }
+
+        .cart-item .item-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cart-item .item-price {
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .cart-item .price-badge {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            min-width: 4rem;
+            text-align: center;
+        }
+
+        .cart-item .price-badge.best {
+            background: rgba(78, 204, 163, 0.2);
+            color: var(--success);
+        }
+
+        .cart-item .price-badge.higher {
+            background: rgba(233, 69, 96, 0.15);
+            color: var(--accent-soft);
+        }
+
+        .cart-footer {
+            padding: 1rem 1.25rem;
+            background: var(--surface-hover);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cart-footer .total {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .cart-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .match-select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            padding: 0.3rem 0.5rem;
+            font-size: 0.8rem;
+            max-width: 200px;
+            cursor: pointer;
+        }
+
+        .match-select:hover {
+            border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -424,6 +614,12 @@
         <div class="panel" id="resultsPanel" style="display: none;">
             <div class="panel-header">
                 <h2 class="panel-title">📊 Results</h2>
+                <div class="view-controls">
+                    <button class="secondary small active" id="tableViewBtn" onclick="setViewMode('table')">Table</button>
+                    <button class="secondary small" id="cartViewBtn" onclick="setViewMode('cart')">Carts</button>
+                    <span class="cart-limit-label">Top</span>
+                    <input type="number" class="cart-limit-input" id="cartLimit" value="5" min="1" max="50" onchange="updateCartLimit()">
+                </div>
             </div>
 
             <div class="summary-cards" id="summary"></div>
@@ -435,6 +631,10 @@
     <script>
         // State
         let wishlist = [];
+        let viewMode = 'table';
+        let cartLimit = 5;
+        let lastResults = null;
+        let selectedMatches = {}; // key: "gameIndex-storeIndex", value: match index (-1 = none)
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
@@ -465,6 +665,12 @@
             wishlist.splice(index, 1);
             // Reorder priorities
             wishlist.forEach((g, i) => g.priority = i + 1);
+            await saveWishlist();
+            renderWishlist();
+        }
+
+        async function toggleStar(index) {
+            wishlist[index].starred = !wishlist[index].starred;
             await saveWishlist();
             renderWishlist();
         }
@@ -559,6 +765,10 @@
                     ondrop="handleDrop(event, ${i})">
                     <span class="drag-handle">⋮⋮</span>
                     <span class="priority">#${game.priority}</span>
+                    <button class="star-toggle ${game.starred ? 'starred' : ''}"
+                            onclick="toggleStar(${i})" title="Toggle must-have">
+                        ${game.starred ? '★' : '☆'}
+                    </button>
                     <span class="name">${escapeHtml(game.name)}</span>
                     <div class="actions">
                         <button onclick="removeGame(${i})" title="Remove">×</button>
@@ -638,6 +848,7 @@
                 if (!response.ok) throw new Error('Check failed');
 
                 const data = await response.json();
+                selectedMatches = {}; // Reset selections on new search
                 renderResults(data);
             } catch (err) {
                 resultsContent.innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
@@ -648,8 +859,8 @@
         }
 
         function renderResults(data) {
+            lastResults = data;
             const summary = document.getElementById('summary');
-            const resultsContent = document.getElementById('resultsContent');
 
             // Find best store
             const stores = Object.entries(data.summary);
@@ -663,9 +874,35 @@
                 </div>
             `).join('');
 
-            // Build results table
+            // Dispatch to correct view
+            if (viewMode === 'cart') {
+                renderCartView(data);
+            } else {
+                renderTableView(data);
+            }
+        }
+
+        function getEffectiveResult(result, gameIndex, storeIndex) {
+            const key = `${gameIndex}-${storeIndex}`;
+            const matches = result.matches || [];
+            const selectedIdx = selectedMatches[key];
+
+            if (selectedIdx === -1) {
+                // Excluded
+                return { ...result, found: false, excluded: true };
+            }
+            if (selectedIdx !== undefined && matches[selectedIdx]) {
+                const m = matches[selectedIdx];
+                return { ...result, title: m.title, url: m.url, price: m.price, priceNum: m.priceNum, inStock: m.inStock };
+            }
+            return result;
+        }
+
+        function renderTableView(data) {
+            const resultsContent = document.getElementById('resultsContent');
+            const stores = Object.entries(data.summary);
             const storeNames = stores.map(([name]) => name);
-            
+
             let tableHtml = `
                 <table class="results-table">
                     <thead>
@@ -678,17 +915,24 @@
                     <tbody>
             `;
 
-            data.results.forEach((game, i) => {
-                // Find best price for this game
-                const prices = game.results
+            data.results.forEach((game, gameIndex) => {
+                // Get effective results with user selections applied
+                const effectiveResults = game.results.map((r, storeIndex) =>
+                    getEffectiveResult(r, gameIndex, storeIndex)
+                );
+
+                // Find best price for this game (in-stock only)
+                const prices = effectiveResults
                     .filter(r => r.found && r.inStock && r.priceNum > 0)
                     .map(r => r.priceNum);
                 const bestPrice = prices.length > 0 ? Math.min(...prices) : null;
 
                 tableHtml += `<tr>
-                    <td>${i + 1}</td>
+                    <td>${gameIndex + 1}</td>
                     <td class="game-name">${escapeHtml(game.name)}</td>
-                    ${game.results.map(result => renderStoreCell(result, bestPrice)).join('')}
+                    ${game.results.map((result, storeIndex) =>
+                        renderStoreCell(result, bestPrice, gameIndex, storeIndex)
+                    ).join('')}
                 </tr>`;
             });
 
@@ -696,29 +940,201 @@
             resultsContent.innerHTML = tableHtml;
         }
 
-        function renderStoreCell(result, bestPrice) {
+        function renderStoreCell(result, bestPrice, gameIndex, storeIndex) {
             if (result.error) {
                 return `<td><span class="status not-found">⚠️ Error</span></td>`;
             }
-            
+
             if (!result.found) {
                 return `<td><span class="status not-found">—</span></td>`;
             }
 
-            const isBestPrice = bestPrice && result.priceNum === bestPrice && result.inStock;
-            
-            if (result.inStock) {
+            const key = `${gameIndex}-${storeIndex}`;
+            const matches = result.matches || [];
+            const selectedIdx = selectedMatches[key] ?? 0;
+            const effective = getEffectiveResult(result, gameIndex, storeIndex);
+
+            // Check if excluded
+            if (selectedIdx === -1) {
                 return `<td>
-                    <span class="status in-stock">✓ In Stock</span><br>
-                    <span class="price ${isBestPrice ? 'best-price' : ''}">${result.price}</span>
-                    ${isBestPrice ? ' ⭐' : ''}<br>
-                    <a href="${result.url}" target="_blank">View →</a>
+                    <span class="status not-found">✗ Excluded</span><br>
+                    <select class="match-select" onchange="selectMatch(${gameIndex}, ${storeIndex}, this.value)">
+                        <option value="-1" selected>— None —</option>
+                        ${matches.map((m, i) => {
+                            const label = truncate(m.title, 30) + ' - ' + m.price + (m.inStock ? '' : ' (OOS)');
+                            return `<option value="${i}">${escapeHtml(label)}</option>`;
+                        }).join('')}
+                    </select>
                 </td>`;
+            }
+
+            const isBestPrice = bestPrice && effective.priceNum === bestPrice && effective.inStock;
+
+            let html = '<td>';
+
+            if (effective.inStock) {
+                html += `<span class="status in-stock">✓ In Stock</span><br>`;
+                html += `<span class="price ${isBestPrice ? 'best-price' : ''}">${effective.price}</span>`;
+                html += isBestPrice ? ' ⭐' : '';
+                html += '<br>';
             } else {
-                return `<td>
-                    <span class="status out-of-stock">✗ Out of Stock</span><br>
-                    <a href="${result.url}" target="_blank">View →</a>
-                </td>`;
+                html += `<span class="status out-of-stock">✗ Out of Stock</span><br>`;
+            }
+
+            if (matches.length > 1) {
+                html += `<select class="match-select" onchange="selectMatch(${gameIndex}, ${storeIndex}, this.value)">`;
+                html += `<option value="-1">— None —</option>`;
+                matches.forEach((m, i) => {
+                    const label = truncate(m.title, 30) + ' - ' + m.price + (m.inStock ? '' : ' (OOS)');
+                    html += `<option value="${i}"${i === selectedIdx ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+                });
+                html += `</select>`;
+            } else {
+                html += `<a href="${effective.url}" target="_blank">View →</a>`;
+            }
+
+            html += '</td>';
+            return html;
+        }
+
+        function selectMatch(gameIndex, storeIndex, value) {
+            const key = `${gameIndex}-${storeIndex}`;
+            selectedMatches[key] = parseInt(value);
+            renderResults(lastResults);
+        }
+
+        function truncate(str, len) {
+            return str.length > len ? str.slice(0, len) + '...' : str;
+        }
+
+        function calculateCartRankings(results) {
+            const totalItems = wishlist.length;
+            const storeMap = new Map();
+
+            // Build best prices map using effective results (with user selections)
+            const bestPrices = new Map();
+            results.forEach((game, gameIndex) => {
+                const prices = game.results
+                    .map((r, storeIndex) => getEffectiveResult(r, gameIndex, storeIndex))
+                    .filter(r => r.found && r.priceNum >= 5)
+                    .map(r => r.priceNum);
+                if (prices.length > 0) {
+                    bestPrices.set(game.name, Math.min(...prices));
+                }
+            });
+
+            // Process each game result using effective results
+            results.forEach((game, gameIndex) => {
+                const priority = gameIndex + 1;
+                const isStarred = wishlist[gameIndex]?.starred || false;
+                const basePoints = totalItems - priority + 1;
+
+                game.results.forEach((storeResult, storeIndex) => {
+                    const effective = getEffectiveResult(storeResult, gameIndex, storeIndex);
+                    if (!effective.found || !effective.inStock) return;
+
+                    if (!storeMap.has(storeResult.store)) {
+                        storeMap.set(storeResult.store, {
+                            name: storeResult.store,
+                            score: 0,
+                            items: [],
+                            hasStarred: false
+                        });
+                    }
+
+                    const store = storeMap.get(storeResult.store);
+                    store.score += basePoints;
+                    if (isStarred) store.hasStarred = true;
+
+                    const bestPrice = bestPrices.get(game.name);
+                    const isBestPrice = bestPrice && effective.priceNum === bestPrice;
+                    const priceDiff = bestPrice ? effective.priceNum - bestPrice : 0;
+
+                    store.items.push({
+                        priority,
+                        name: game.name,
+                        starred: isStarred,
+                        price: effective.price,
+                        priceNum: effective.priceNum,
+                        url: effective.url,
+                        isBestPrice,
+                        priceDiff
+                    });
+                });
+            });
+
+            // Apply starred bonus and sort
+            const rankings = Array.from(storeMap.values());
+            rankings.forEach(store => {
+                if (store.hasStarred) store.score += 1000;
+                store.items.sort((a, b) => a.priority - b.priority);
+            });
+
+            rankings.sort((a, b) => b.score - a.score);
+            return rankings;
+        }
+
+        function renderCartView(data) {
+            const resultsContent = document.getElementById('resultsContent');
+            const rankings = calculateCartRankings(data.results);
+
+            if (rankings.length === 0) {
+                resultsContent.innerHTML = '<div class="cart-empty">No stores have items in stock</div>';
+                return;
+            }
+
+            resultsContent.innerHTML = `
+                <div class="cart-grid">
+                    ${rankings.map(store => {
+                        const displayItems = store.items.slice(0, cartLimit);
+                        const total = displayItems.reduce((sum, item) => sum + item.priceNum, 0);
+
+                        return `
+                            <div class="cart-card ${store.hasStarred ? 'has-starred' : ''}">
+                                <div class="cart-header">
+                                    <span class="store-name">${escapeHtml(store.name)}</span>
+                                    <span class="score">${store.score} pts</span>
+                                </div>
+                                ${store.hasStarred ? '<div class="starred-badge">★ Has must-have items</div>' : ''}
+                                <ul class="cart-items">
+                                    ${displayItems.map(item => `
+                                        <li class="cart-item">
+                                            <span class="item-priority">#${item.priority}</span>
+                                            <span class="item-star">${item.starred ? '★' : ''}</span>
+                                            <a href="${item.url}" target="_blank" class="item-name" title="${escapeHtml(item.name)}">
+                                                ${escapeHtml(item.name)}
+                                            </a>
+                                            <span class="item-price">${item.price}</span>
+                                            <span class="price-badge ${item.isBestPrice ? 'best' : 'higher'}">
+                                                ${item.isBestPrice ? 'BEST' : '+$' + item.priceDiff.toFixed(2)}
+                                            </span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                                <div class="cart-footer">
+                                    <span>${displayItems.length} item${displayItems.length !== 1 ? 's' : ''}</span>
+                                    <span class="total">$${total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('tableViewBtn').classList.toggle('active', mode === 'table');
+            document.getElementById('cartViewBtn').classList.toggle('active', mode === 'cart');
+            if (lastResults) {
+                renderResults(lastResults);
+            }
+        }
+
+        function updateCartLimit() {
+            cartLimit = parseInt(document.getElementById('cartLimit').value) || 5;
+            if (lastResults && viewMode === 'cart') {
+                renderResults(lastResults);
             }
         }
 

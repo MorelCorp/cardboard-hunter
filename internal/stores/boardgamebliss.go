@@ -26,21 +26,11 @@ func (s *BoardGameBliss) Name() string {
 
 // Check searches for a game at Board Game Bliss
 func (s *BoardGameBliss) Check(gameName string) models.StoreResult {
-	result := models.StoreResult{
-		Store: s.name,
-	}
-
 	products, err := ShopifyClient.Search(s.baseURL, gameName)
 	if err != nil {
-		result.Error = err.Error()
-		return result
+		return models.StoreResult{Store: s.name, Error: err.Error()}
 	}
 
-	matchedResult, found := shopify.FindBestMatch(gameName, products, s.baseURL)
-	if found {
-		result = matchedResult
-		result.Store = s.name
-	}
-
-	return result
+	matches := shopify.FindMatches(gameName, products, s.baseURL, 5)
+	return shopify.BuildStoreResult(s.name, matches, gameName)
 }
