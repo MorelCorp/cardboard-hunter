@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 Wishlist Checker</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --surface-hover: #1f2b4d;
+            --accent: #e94560;
+            --accent-soft: #ff6b6b;
+            --success: #4ecca3;
+            --warning: #ffc857;
+            --text: #edf2f4;
+            --text-muted: #8d99ae;
+            --border: #2d3a5a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .panel {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Input area */
+        .input-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-muted);
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: var(--accent-soft);
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.secondary {
+            background: var(--surface-hover);
+            border: 1px solid var(--border);
+        }
+
+        button.secondary:hover {
+            background: var(--border);
+        }
+
+        button.small {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        /* Wishlist */
+        .wishlist {
+            list-style: none;
+        }
+
+        .wishlist-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background: var(--bg);
+            transition: background 0.2s;
+        }
+
+        .wishlist-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .wishlist-item .priority {
+            font-weight: 600;
+            color: var(--accent);
+            min-width: 2rem;
+            text-align: center;
+        }
+
+        .wishlist-item .name {
+            flex: 1;
+        }
+
+        .wishlist-item .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .wishlist-item button {
+            background: transparent;
+            padding: 0.3rem 0.5rem;
+            font-size: 1rem;
+        }
+
+        .wishlist-item button:hover {
+            background: var(--surface-hover);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        /* Check button */
+        .check-section {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .check-btn {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+
+        /* Results */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-card {
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 1.25rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .summary-card .count {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .summary-card .label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .summary-card.best {
+            border-color: var(--success);
+            box-shadow: 0 0 20px rgba(78, 204, 163, 0.2);
+        }
+
+        .summary-card.best .count {
+            color: var(--success);
+        }
+
+        /* Results table */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .results-table th {
+            background: var(--bg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .results-table tr:hover td {
+            background: var(--surface-hover);
+        }
+
+        .results-table .game-name {
+            font-weight: 500;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status.in-stock {
+            background: rgba(78, 204, 163, 0.15);
+            color: var(--success);
+        }
+
+        .status.out-of-stock {
+            background: rgba(233, 69, 96, 0.15);
+            color: var(--accent);
+        }
+
+        .status.not-found {
+            background: rgba(141, 153, 174, 0.15);
+            color: var(--text-muted);
+        }
+
+        .price {
+            font-weight: 600;
+            color: var(--warning);
+        }
+
+        .price.best-price {
+            color: var(--success);
+        }
+
+        a {
+            color: var(--accent-soft);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Import/Export */
+        .io-section {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .results-table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎲 Wishlist <span>Checker</span></h1>
+            <p class="subtitle">Check board game availability across Canadian retailers</p>
+        </header>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">📋 My Wishlist</h2>
+                <div class="io-section">
+                    <button class="secondary small" onclick="exportList()">Export</button>
+                    <button class="secondary small" onclick="importList()">Import</button>
+                    <button class="secondary small" onclick="clearList()">Clear All</button>
+                </div>
+            </div>
+
+            <div class="input-row">
+                <input type="text" id="gameInput" placeholder="Enter game name (e.g., Cascadia, Wingspan)" 
+                       onkeypress="if(event.key === 'Enter') addGame()">
+                <button onclick="addGame()">+ Add</button>
+            </div>
+
+            <ul class="wishlist" id="wishlist">
+                <li class="empty-state">No games added yet. Add some games above!</li>
+            </ul>
+        </div>
+
+        <div class="check-section">
+            <button class="check-btn" onclick="checkAvailability()" id="checkBtn">
+                🔍 Check Availability
+            </button>
+        </div>
+
+        <div class="panel" id="resultsPanel" style="display: none;">
+            <div class="panel-header">
+                <h2 class="panel-title">📊 Results</h2>
+            </div>
+
+            <div class="summary-cards" id="summary"></div>
+
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderWishlist();
+        });
+
+        // Wishlist management
+        function addGame() {
+            const input = document.getElementById('gameInput');
+            const name = input.value.trim();
+            
+            if (!name) return;
+            
+            if (wishlist.some(g => g.name.toLowerCase() === name.toLowerCase())) {
+                alert('Game already in wishlist');
+                return;
+            }
+
+            wishlist.push({ name, priority: wishlist.length + 1 });
+            saveWishlist();
+            renderWishlist();
+            input.value = '';
+            input.focus();
+        }
+
+        function removeGame(index) {
+            wishlist.splice(index, 1);
+            // Reorder priorities
+            wishlist.forEach((g, i) => g.priority = i + 1);
+            saveWishlist();
+            renderWishlist();
+        }
+
+        function moveGame(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= wishlist.length) return;
+            
+            [wishlist[index], wishlist[newIndex]] = [wishlist[newIndex], wishlist[index]];
+            wishlist.forEach((g, i) => g.priority = i + 1);
+            saveWishlist();
+            renderWishlist();
+        }
+
+        function saveWishlist() {
+            localStorage.setItem('wishlist', JSON.stringify(wishlist));
+        }
+
+        function renderWishlist() {
+            const container = document.getElementById('wishlist');
+            
+            if (wishlist.length === 0) {
+                container.innerHTML = '<li class="empty-state">No games added yet. Add some games above!</li>';
+                return;
+            }
+
+            container.innerHTML = wishlist.map((game, i) => `
+                <li class="wishlist-item">
+                    <span class="priority">#${game.priority}</span>
+                    <span class="name">${escapeHtml(game.name)}</span>
+                    <div class="actions">
+                        <button onclick="moveGame(${i}, -1)" title="Move up">↑</button>
+                        <button onclick="moveGame(${i}, 1)" title="Move down">↓</button>
+                        <button onclick="removeGame(${i})" title="Remove">×</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        // Import/Export
+        function exportList() {
+            const data = wishlist.map(g => g.name).join('\n');
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'wishlist.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importList() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt,.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const text = await file.text();
+                const lines = text.split(/[\n,]/).map(l => l.trim()).filter(l => l);
+                
+                lines.forEach(name => {
+                    if (!wishlist.some(g => g.name.toLowerCase() === name.toLowerCase())) {
+                        wishlist.push({ name, priority: wishlist.length + 1 });
+                    }
+                });
+                
+                saveWishlist();
+                renderWishlist();
+            };
+            input.click();
+        }
+
+        function clearList() {
+            if (!confirm('Clear entire wishlist?')) return;
+            wishlist = [];
+            saveWishlist();
+            renderWishlist();
+            document.getElementById('resultsPanel').style.display = 'none';
+        }
+
+        // Check availability
+        async function checkAvailability() {
+            if (wishlist.length === 0) {
+                alert('Add some games to your wishlist first!');
+                return;
+            }
+
+            const btn = document.getElementById('checkBtn');
+            const resultsPanel = document.getElementById('resultsPanel');
+            const resultsContent = document.getElementById('resultsContent');
+            const summary = document.getElementById('summary');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Checking...';
+            resultsPanel.style.display = 'block';
+            resultsContent.innerHTML = '<div class="loading"><div class="spinner"></div>Checking stores...</div>';
+            summary.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ games: wishlist })
+                });
+
+                if (!response.ok) throw new Error('Check failed');
+
+                const data = await response.json();
+                renderResults(data);
+            } catch (err) {
+                resultsContent.innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Check Availability';
+            }
+        }
+
+        function renderResults(data) {
+            const summary = document.getElementById('summary');
+            const resultsContent = document.getElementById('resultsContent');
+
+            // Find best store
+            const stores = Object.entries(data.summary);
+            const maxCount = Math.max(...stores.map(([, c]) => c));
+
+            // Render summary cards
+            summary.innerHTML = stores.map(([store, count]) => `
+                <div class="summary-card ${count === maxCount && count > 0 ? 'best' : ''}">
+                    <div class="count">${count}</div>
+                    <div class="label">${store}</div>
+                </div>
+            `).join('');
+
+            // Build results table
+            const storeNames = stores.map(([name]) => name);
+            
+            let tableHtml = `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Game</th>
+                            ${storeNames.map(s => `<th>${s}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.results.forEach((game, i) => {
+                // Find best price for this game
+                const prices = game.results
+                    .filter(r => r.found && r.inStock && r.priceNum > 0)
+                    .map(r => r.priceNum);
+                const bestPrice = prices.length > 0 ? Math.min(...prices) : null;
+
+                tableHtml += `<tr>
+                    <td>${i + 1}</td>
+                    <td class="game-name">${escapeHtml(game.name)}</td>
+                    ${game.results.map(result => renderStoreCell(result, bestPrice)).join('')}
+                </tr>`;
+            });
+
+            tableHtml += '</tbody></table>';
+            resultsContent.innerHTML = tableHtml;
+        }
+
+        function renderStoreCell(result, bestPrice) {
+            if (result.error) {
+                return `<td><span class="status not-found">⚠️ Error</span></td>`;
+            }
+            
+            if (!result.found) {
+                return `<td><span class="status not-found">—</span></td>`;
+            }
+
+            const isBestPrice = bestPrice && result.priceNum === bestPrice && result.inStock;
+            
+            if (result.inStock) {
+                return `<td>
+                    <span class="status in-stock">✓ In Stock</span><br>
+                    <span class="price ${isBestPrice ? 'best-price' : ''}">${result.price}</span>
+                    ${isBestPrice ? ' ⭐' : ''}<br>
+                    <a href="${result.url}" target="_blank">View →</a>
+                </td>`;
+            } else {
+                return `<td>
+                    <span class="status out-of-stock">✗ Out of Stock</span><br>
+                    <a href="${result.url}" target="_blank">View →</a>
+                </td>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
