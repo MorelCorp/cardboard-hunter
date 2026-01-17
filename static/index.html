@@ -160,11 +160,29 @@
             border-radius: 8px;
             margin-bottom: 0.5rem;
             background: var(--bg);
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.2s, opacity 0.2s;
+            cursor: grab;
         }
 
         .wishlist-item:hover {
             background: var(--surface-hover);
+        }
+
+        .wishlist-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .wishlist-item.drag-over {
+            border-top: 2px solid var(--accent);
+            margin-top: -2px;
+        }
+
+        .wishlist-item .drag-handle {
+            color: var(--text-muted);
+            cursor: grab;
+            padding: 0 0.25rem;
+            user-select: none;
         }
 
         .wishlist-item .priority {
@@ -451,11 +469,44 @@
             renderWishlist();
         }
 
-        async function moveGame(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= wishlist.length) return;
+        // Drag and drop
+        let draggedIndex = null;
 
-            [wishlist[index], wishlist[newIndex]] = [wishlist[newIndex], wishlist[index]];
+        function handleDragStart(e, index) {
+            draggedIndex = index;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.wishlist-item').forEach(el => el.classList.remove('drag-over'));
+            draggedIndex = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e, index) {
+            if (index !== draggedIndex) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e, targetIndex) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+            const [moved] = wishlist.splice(draggedIndex, 1);
+            wishlist.splice(targetIndex, 0, moved);
             wishlist.forEach((g, i) => g.priority = i + 1);
             await saveWishlist();
             renderWishlist();
@@ -492,19 +543,24 @@
 
         function renderWishlist() {
             const container = document.getElementById('wishlist');
-            
+
             if (wishlist.length === 0) {
                 container.innerHTML = '<li class="empty-state">No games added yet. Add some games above!</li>';
                 return;
             }
 
             container.innerHTML = wishlist.map((game, i) => `
-                <li class="wishlist-item">
+                <li class="wishlist-item" draggable="true"
+                    ondragstart="handleDragStart(event, ${i})"
+                    ondragend="handleDragEnd(event)"
+                    ondragover="handleDragOver(event)"
+                    ondragenter="handleDragEnter(event, ${i})"
+                    ondragleave="handleDragLeave(event)"
+                    ondrop="handleDrop(event, ${i})">
+                    <span class="drag-handle">⋮⋮</span>
                     <span class="priority">#${game.priority}</span>
                     <span class="name">${escapeHtml(game.name)}</span>
                     <div class="actions">
-                        <button onclick="moveGame(${i}, -1)" title="Move up">↑</button>
-                        <button onclick="moveGame(${i}, 1)" title="Move down">↓</button>
                         <button onclick="removeGame(${i})" title="Remove">×</button>
                     </div>
                 </li>
