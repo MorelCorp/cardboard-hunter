@@ -1,0 +1,19 @@
+{
+  "id": "boardgamesnmore",
+  "name": "Board Games N More",
+  "enabled": true,
+  "type": "json_api",
+  "baseURL": "https://www.boardgamesnmore.com",
+  "jsonApi": {
+    "searchPath": "/index.php?route=journal3/search&search={query}",
+    "productsPath": "products",
+    "fields": {
+      "title": "name",
+      "price": "price",
+      "url": "href",
+      "quantity": "quantity",
+      "stockStatus": "stock_status"
+    },
+    "inStockValue": "In Stock"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "levalet",
+  "name": "Le Valet d'Coeur",
+  "enabled": true,
+  "type": "html_scraper",
+  "baseURL": "https://levalet.com",
+  "headers": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept-Language": "fr-CA,fr;q=0.9"
+  },
+  "scraper": {
+    "searchPath": "/fr/catalogsearch/result/?q={query}",
+    "cardSplitter": "<li[^>]*class=\"[^\"]*product-item[^\"]*\"",
+    "titlePatterns": [
+      "<a[^>]*href=\"([^\"]+)\"[^>]*class=\"product-item-link\"[^>]*>([^<]+)</a>",
+      "<a[^>]*class=\"product-item-link\"[^>]*href=\"([^\"]+)\"[^>]*>([^<]+)</a>"
+    ],
+    "titleGroups": {"url": 1, "title": 2},
+    "pricePatterns": [
+      {"pattern": "data-price-amount=\"([^\"]+)\"", "groups": {"amount": 1}},
+      {"pattern": "(\\d+)[,.](\\d{2})\\s*\\$", "groups": {"dollars": 1, "cents": 2}}
+    ],
+    "pricePrefix": "$",
+    "outOfStockIndicators": ["Rupture", "Hors d'impression"],
+    "inStockIndicators": ["Ajouter au panier"],
+    "stockLogic": "in_stock_required"
+  }
+}

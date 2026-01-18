@@ -1,0 +1,10 @@
+{
+  "id": "games401",
+  "name": "401 Games",
+  "enabled": true,
+  "type": "shopify",
+  "baseURL": "https://store.401games.ca",
+  "shopify": {
+    "excludePatterns": ["sleeve", "single", "booster"]
+  }
+}

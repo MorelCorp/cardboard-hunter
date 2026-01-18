@@ -1,0 +1,10 @@
+{
+  "id": "lapioche",
+  "name": "La Pioche",
+  "enabled": true,
+  "type": "shopify",
+  "baseURL": "https://boutiquelapioche.com",
+  "shopify": {
+    "excludePatterns": []
+  }
+}

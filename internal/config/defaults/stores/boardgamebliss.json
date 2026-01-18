@@ -1,0 +1,10 @@
+{
+  "id": "boardgamebliss",
+  "name": "Board Game Bliss",
+  "enabled": true,
+  "type": "shopify",
+  "baseURL": "https://www.boardgamebliss.com",
+  "shopify": {
+    "excludePatterns": []
+  }
+}

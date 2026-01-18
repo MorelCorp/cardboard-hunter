@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "stores": [
+    {"id": "boardgamebliss", "file": "stores/boardgamebliss.json"},
+    {"id": "games401", "file": "stores/games401.json"},
+    {"id": "greatboardgames", "file": "stores/greatboardgames.json"},
+    {"id": "lapioche", "file": "stores/lapioche.json"},
+    {"id": "boardgamesnmore", "file": "stores/boardgamesnmore.json"},
+    {"id": "levalet", "file": "stores/levalet.json"},
+    {"id": "larevanche", "builtin": true}
+  ],
+  "defaults": {
+    "maxMatches": 5,
+    "timeout": "15s"
+  }
+}
