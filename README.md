@@ -1,23 +1,31 @@
-# Board Game Wishlist Checker
+# Cardboard Hunter
 
-Check board game availability across Canadian retailers. Single Go binary with embedded web UI.
+Check board game availability across multiple stores. Single Go binary with embedded web UI.
 
 ## Supported Stores
 
-- **Board Game Bliss** (boardgamebliss.com) — Shopify API
-- **401 Games** (store.401games.ca) — Shopify API, filters TCG products
-- **Great Board Games** (greatboardgames.ca) — HTML scraping
+- **Board Game Bliss** (boardgamebliss.com) — Shopify
+- **401 Games** (store.401games.ca) — Shopify, filters TCG products
+- **Great Board Games** (greatboardgames.ca) — HTML scraper
+- **La Pioche** (lapioche.ca) — Shopify
+- **Board Games N More** (boardgamesnmore.com) — Shopify
+- **Le Valet** (levalet.com) — HTML scraper
+- **La Revanche** (larevanche.ca) — JSON API (builtin)
 
 ## Building & Running
 
 Requires Go 1.21+
 
 ```bash
-go build -o cardboard-hunter .
+# Windows
+build.bat
+
+# Or directly
+go build -o cardboard-hunter.exe .
 ./cardboard-hunter
 ```
 
-Open http://localhost:8080
+The browser opens automatically on launch. Use the "Exit App" button to close.
 
 ## Features
 
@@ -64,27 +72,78 @@ Starred items: Any store with a starred item gets +1000 bonus.
 ```
 cardboard-hunter/
 ├── main.go                     # HTTP server, handlers
+├── build.bat                   # Windows build script
 ├── internal/
 │   ├── models/models.go        # Data structures (Game, StoreResult, etc.)
 │   ├── checker/checker.go      # Concurrent game checking
+│   ├── config/
+│   │   ├── types.go            # Config structs
+│   │   ├── loader.go           # Config loading (embedded + external)
+│   │   └── defaults/
+│   │       ├── stores.json     # Main store list
+│   │       └── stores/*.json   # Individual store configs
 │   ├── stores/
-│   │   ├── store.go            # Store interface
-│   │   ├── shopify.go          # Shared Shopify client
-│   │   ├── boardgamebliss.go   # Board Game Bliss implementation
-│   │   ├── games401.go         # 401 Games (with TCG filtering)
-│   │   └── greatboardgames.go  # Great Board Games (HTML scraping)
+│   │   ├── store.go            # Store interface + registry
+│   │   ├── shopify.go          # Shopify checker (config-driven)
+│   │   ├── scraper.go          # HTML scraper (config-driven)
+│   │   └── larevanche.go       # Builtin: La Revanche (custom JSON API)
 │   ├── storage/storage.go      # games.json persistence
 │   └── utils/utils.go          # FuzzyMatch, ParsePrice helpers
 ├── static/index.html           # Embedded web UI (all HTML/CSS/JS)
 └── games.json                  # User's saved wishlist
 ```
 
-## Adding Stores
+## Store Configuration
 
-1. Create `internal/stores/newstore.go` implementing the `Store` interface
-2. Register in `internal/stores/store.go`
+Stores are defined in JSON config files embedded in the binary. Three store types are supported:
 
-Shopify stores are straightforward (see `boardgamebliss.go`). Others need HTML scraping.
+### Shopify Stores
+
+```json
+{
+  "id": "boardgamebliss",
+  "name": "Board Game Bliss",
+  "enabled": true,
+  "type": "shopify",
+  "baseURL": "https://www.boardgamebliss.com",
+  "shopify": {
+    "excludePatterns": ["TCG", "Sleeve"]
+  }
+}
+```
+
+### HTML Scraper Stores
+
+```json
+{
+  "id": "greatboardgames",
+  "name": "Great Board Games",
+  "enabled": true,
+  "type": "html_scraper",
+  "baseURL": "https://www.greatboardgames.ca",
+  "headers": {"User-Agent": "..."},
+  "scraper": {
+    "searchPath": "/search?q={query}",
+    "cardSplitter": "<div class=\"product-card",
+    "titlePatterns": ["<a href=\"([^\"]+)\"[^>]*>([^<]+)</a>"],
+    "titleGroups": {"url": 1, "title": 2},
+    "pricePatterns": [{"pattern": "\\$([0-9.]+)", "groups": {"amount": 1}}],
+    "pricePrefix": "$",
+    "outOfStockIndicators": ["Out of Stock"],
+    "stockLogic": "out_of_stock"
+  }
+}
+```
+
+### Adding a New Store
+
+1. Create `internal/config/defaults/stores/newstore.json`
+2. Add reference to `internal/config/defaults/stores.json`:
+   ```json
+   {"id": "newstore", "file": "stores/newstore.json"}
+   ```
+
+For stores that don't fit the Shopify or scraper patterns, create a builtin implementation in `internal/stores/` and mark it with `"builtin": true` in stores.json.
 
 ## API Endpoints
 
@@ -92,6 +151,7 @@ Shopify stores are straightforward (see `boardgamebliss.go`). Others need HTML s
 - `GET /api/games` — Load saved wishlist
 - `POST /api/games` — Save wishlist
 - `POST /api/check` — Check availability (returns results + summary)
+- `POST /api/shutdown` — Exit the application
 
 ## Data Models
 

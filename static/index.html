@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎲 Wishlist Checker</title>
+    <title>🎲 Cardboard Hunter</title>
     <style>
         :root {
             --bg: #1a1a2e;
@@ -43,6 +43,27 @@
             margin-bottom: 2rem;
             padding-bottom: 1.5rem;
             border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .shutdown-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .shutdown-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
         }
 
         h1 {
@@ -645,8 +666,9 @@
 <body>
     <div class="container">
         <header>
+            <button class="shutdown-btn" onclick="shutdown()">Exit App</button>
             <h1>🎲 Wishlist <span>Checker</span></h1>
-            <p class="subtitle">Check board game availability across Canadian retailers</p>
+            <p class="subtitle">Check board game availability across multiple retailers</p>
         </header>
 
         <div class="panel">
@@ -1294,6 +1316,16 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function shutdown() {
+            if (!confirm('Exit the application?')) return;
+            try {
+                await fetch('/api/shutdown', { method: 'POST' });
+            } catch (e) {
+                // Expected - server shuts down
+            }
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:var(--text-muted);">Application closed. You can close this tab.</div>';
         }
     </script>
 </body>

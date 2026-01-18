@@ -7,6 +7,9 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
 
 	"cardboard-hunter/internal/checker"
 	"cardboard-hunter/internal/models"
@@ -31,11 +34,38 @@ func main() {
 	// API endpoints
 	http.HandleFunc("/api/check", handleCheck)
 	http.HandleFunc("/api/games", handleGames)
+	http.HandleFunc("/api/shutdown", handleShutdown)
 
 	port := "8080"
-	fmt.Printf("🎲 Wishlist Checker running at http://localhost:%s\n", port)
-	fmt.Println("Open your browser to start checking game availability!")
+	url := fmt.Sprintf("http://localhost:%s", port)
+	fmt.Printf("🎲 Cardboard Hunter running at %s\n", url)
+	go openBrowser(url)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	cmd.Run()
+}
+
+func handleShutdown(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "shutting down"})
+	go func() {
+		os.Exit(0)
+	}()
 }
 
 func handleCheck(w http.ResponseWriter, r *http.Request) {
