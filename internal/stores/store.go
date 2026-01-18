@@ -30,5 +30,9 @@ func GetAllStores() []Store {
 		NewBoardGameBliss(),
 		NewGames401(),
 		NewGreatBoardGames(),
+		NewLaPioche(),
+		NewBoardGamesNMore(),
+		NewLaRevanche(),
+		NewLeValet(),
 	}
 }

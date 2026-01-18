@@ -6,7 +6,8 @@
       "Bash(go test:*)",
       "Bash(go run:*)",
       "Bash(timeout 3:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(go vet:*)"
     ]
   }
 }

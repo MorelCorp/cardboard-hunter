@@ -27,7 +27,10 @@ func ExactTitleMatch(search, title string) bool {
 // ShouldExclude checks if a product should be filtered out
 func ShouldExclude(title string) bool {
 	t := strings.ToLower(title)
-	return strings.Contains(t, "pre-order") || strings.Contains(t, "preorder")
+	return strings.Contains(t, "pre-order") ||
+		strings.Contains(t, "preorder") ||
+		strings.Contains(t, "extension") ||
+		strings.Contains(t, "expansion")
 }
 
 // FuzzyMatch checks if search term matches title using word boundary matching

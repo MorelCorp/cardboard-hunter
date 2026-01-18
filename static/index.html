@@ -575,6 +575,71 @@
         .match-select:hover {
             border-color: var(--accent);
         }
+
+        /* Store carousel */
+        .carousel-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--surface-hover);
+            border-radius: 8px;
+        }
+
+        .carousel-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .carousel-btn:hover:not(:disabled) {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .carousel-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .carousel-dots {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .carousel-dot:hover {
+            background: var(--text-muted);
+        }
+
+        .carousel-dot.active {
+            background: var(--accent);
+        }
+
+        .carousel-info {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -619,6 +684,7 @@
                     <button class="secondary small" id="cartViewBtn" onclick="setViewMode('cart')">Carts</button>
                     <span class="cart-limit-label">Top</span>
                     <input type="number" class="cart-limit-input" id="cartLimit" value="5" min="1" max="50" onchange="updateCartLimit()">
+                    <button class="secondary small" onclick="refreshUI()" title="Refresh rankings">↻</button>
                 </div>
             </div>
 
@@ -635,6 +701,8 @@
         let cartLimit = 5;
         let lastResults = null;
         let selectedMatches = {}; // key: "gameIndex-storeIndex", value: match index (-1 = none)
+        let carouselPage = 0;
+        const STORES_PER_PAGE = 3;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
@@ -849,6 +917,7 @@
 
                 const data = await response.json();
                 selectedMatches = {}; // Reset selections on new search
+                carouselPage = 0; // Reset carousel to first page
                 renderResults(data);
             } catch (err) {
                 resultsContent.innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
@@ -898,41 +967,103 @@
             return result;
         }
 
+        // Carousel helpers
+        function getTotalPages(totalItems) {
+            return Math.ceil(totalItems / STORES_PER_PAGE);
+        }
+
+        function getVisibleRange(totalItems) {
+            const start = carouselPage * STORES_PER_PAGE;
+            const end = Math.min(start + STORES_PER_PAGE, totalItems);
+            return { start, end };
+        }
+
+        function renderCarouselControls(totalItems) {
+            const totalPages = getTotalPages(totalItems);
+            if (totalPages <= 1) return '';
+
+            const { start, end } = getVisibleRange(totalItems);
+            const dots = Array.from({ length: totalPages }, (_, i) =>
+                `<button class="carousel-dot ${i === carouselPage ? 'active' : ''}" onclick="carouselGoTo(${i})"></button>`
+            ).join('');
+
+            return `
+                <div class="carousel-controls">
+                    <button class="carousel-btn" onclick="carouselPrev()" ${carouselPage === 0 ? 'disabled' : ''}>←</button>
+                    <div class="carousel-dots">${dots}</div>
+                    <button class="carousel-btn" onclick="carouselNext()" ${carouselPage >= totalPages - 1 ? 'disabled' : ''}>→</button>
+                    <span class="carousel-info">Stores ${start + 1}-${end} of ${totalItems}</span>
+                </div>
+            `;
+        }
+
+        function carouselPrev() {
+            if (carouselPage > 0) {
+                carouselPage--;
+                renderResults(lastResults);
+            }
+        }
+
+        function carouselNext() {
+            const totalPages = getTotalPages(Object.keys(lastResults.summary).length);
+            if (carouselPage < totalPages - 1) {
+                carouselPage++;
+                renderResults(lastResults);
+            }
+        }
+
+        function carouselGoTo(page) {
+            carouselPage = page;
+            renderResults(lastResults);
+        }
+
         function renderTableView(data) {
             const resultsContent = document.getElementById('resultsContent');
-            const stores = Object.entries(data.summary);
-            const storeNames = stores.map(([name]) => name);
+            const allStores = Object.entries(data.summary);
+            const { start, end } = getVisibleRange(allStores.length);
+            const visibleStores = allStores.slice(start, end);
+            const visibleStoreNames = visibleStores.map(([name]) => name);
 
-            let tableHtml = `
+            // Build store index mapping (original index for each visible store)
+            const storeIndexMap = new Map();
+            allStores.forEach(([name], idx) => storeIndexMap.set(name, idx));
+
+            let tableHtml = renderCarouselControls(allStores.length);
+
+            tableHtml += `
                 <table class="results-table">
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Game</th>
-                            ${storeNames.map(s => `<th>${s}</th>`).join('')}
+                            ${visibleStoreNames.map(s => `<th>${s}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
             `;
 
             data.results.forEach((game, gameIndex) => {
-                // Get effective results with user selections applied
+                // Get effective results with user selections applied (for ALL stores, for best price calc)
                 const effectiveResults = game.results.map((r, storeIndex) =>
                     getEffectiveResult(r, gameIndex, storeIndex)
                 );
 
-                // Find best price for this game (in-stock only)
+                // Find best price for this game across ALL stores (in-stock only)
                 const prices = effectiveResults
                     .filter(r => r.found && r.inStock && r.priceNum > 0)
                     .map(r => r.priceNum);
                 const bestPrice = prices.length > 0 ? Math.min(...prices) : null;
 
+                // Only render cells for visible stores
+                const visibleCells = visibleStoreNames.map(storeName => {
+                    const storeIndex = storeIndexMap.get(storeName);
+                    return renderStoreCell(game.results[storeIndex], bestPrice, gameIndex, storeIndex);
+                }).join('');
+
                 tableHtml += `<tr>
                     <td>${gameIndex + 1}</td>
                     <td class="game-name">${escapeHtml(game.name)}</td>
-                    ${game.results.map((result, storeIndex) =>
-                        renderStoreCell(result, bestPrice, gameIndex, storeIndex)
-                    ).join('')}
+                    ${visibleCells}
                 </tr>`;
             });
 
@@ -1012,11 +1143,12 @@
             const storeMap = new Map();
 
             // Build best prices map using effective results (with user selections)
+            // Only consider items that are found, in stock, and have valid prices
             const bestPrices = new Map();
             results.forEach((game, gameIndex) => {
                 const prices = game.results
                     .map((r, storeIndex) => getEffectiveResult(r, gameIndex, storeIndex))
-                    .filter(r => r.found && r.priceNum >= 5)
+                    .filter(r => r.found && r.inStock && r.priceNum > 0)
                     .map(r => r.priceNum);
                 if (prices.length > 0) {
                     bestPrices.set(game.name, Math.min(...prices));
@@ -1031,7 +1163,8 @@
 
                 game.results.forEach((storeResult, storeIndex) => {
                     const effective = getEffectiveResult(storeResult, gameIndex, storeIndex);
-                    if (!effective.found || !effective.inStock) return;
+                    // Skip if not found, not in stock, or excluded by user
+                    if (!effective.found || !effective.inStock || effective.excluded) return;
 
                     if (!storeMap.has(storeResult.store)) {
                         storeMap.set(storeResult.store, {
@@ -1043,22 +1176,27 @@
                     }
 
                     const store = storeMap.get(storeResult.store);
-                    store.score += basePoints;
                     if (isStarred) store.hasStarred = true;
 
                     const bestPrice = bestPrices.get(game.name);
-                    const isBestPrice = bestPrice && effective.priceNum === bestPrice;
-                    const priceDiff = bestPrice ? effective.priceNum - bestPrice : 0;
+                    const hasValidPrice = effective.priceNum > 0;
+                    const isBestPrice = hasValidPrice && bestPrice && effective.priceNum === bestPrice;
+                    const priceDiff = (hasValidPrice && bestPrice) ? effective.priceNum - bestPrice : 0;
+
+                    // Double points for best price items
+                    const points = isBestPrice ? basePoints * 2 : basePoints;
+                    store.score += points;
 
                     store.items.push({
                         priority,
                         name: game.name,
                         starred: isStarred,
-                        price: effective.price,
-                        priceNum: effective.priceNum,
+                        price: hasValidPrice ? effective.price : 'N/A',
+                        priceNum: effective.priceNum || 0,
                         url: effective.url,
                         isBestPrice,
-                        priceDiff
+                        priceDiff,
+                        hasValidPrice
                     });
                 });
             });
@@ -1083,9 +1221,14 @@
                 return;
             }
 
+            // Apply carousel to cart view
+            const { start, end } = getVisibleRange(rankings.length);
+            const visibleRankings = rankings.slice(start, end);
+
             resultsContent.innerHTML = `
+                ${renderCarouselControls(rankings.length)}
                 <div class="cart-grid">
-                    ${rankings.map(store => {
+                    ${visibleRankings.map(store => {
                         const displayItems = store.items.slice(0, cartLimit);
                         const total = displayItems.reduce((sum, item) => sum + item.priceNum, 0);
 
@@ -1105,15 +1248,17 @@
                                                 ${escapeHtml(item.name)}
                                             </a>
                                             <span class="item-price">${item.price}</span>
-                                            <span class="price-badge ${item.isBestPrice ? 'best' : 'higher'}">
-                                                ${item.isBestPrice ? 'BEST' : '+$' + item.priceDiff.toFixed(2)}
-                                            </span>
+                                            ${item.hasValidPrice ? `
+                                                <span class="price-badge ${item.isBestPrice ? 'best' : 'higher'}">
+                                                    ${item.isBestPrice ? 'BEST' : '+$' + item.priceDiff.toFixed(2)}
+                                                </span>
+                                            ` : '<span class="price-badge">—</span>'}
                                         </li>
                                     `).join('')}
                                 </ul>
                                 <div class="cart-footer">
                                     <span>${displayItems.length} item${displayItems.length !== 1 ? 's' : ''}</span>
-                                    <span class="total">$${total.toFixed(2)}</span>
+                                    <span class="total">${total > 0 ? '$' + total.toFixed(2) : 'N/A'}</span>
                                 </div>
                             </div>
                         `;
@@ -1134,6 +1279,13 @@
         function updateCartLimit() {
             cartLimit = parseInt(document.getElementById('cartLimit').value) || 5;
             if (lastResults && viewMode === 'cart') {
+                renderResults(lastResults);
+            }
+        }
+
+        function refreshUI() {
+            if (lastResults) {
+                carouselPage = 0; // Reset to first page
                 renderResults(lastResults);
             }
         }
